@@ -198,7 +198,7 @@ fun BiocodeMacroBentoModule(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF071916))
+                    .background(BiocodePalette.DeckBorder.copy(alpha = 0.4f))
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     Box(
@@ -321,7 +321,7 @@ private fun MacroModularCell(
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFF10190D))
+                    .background(BiocodePalette.DeckBorder.copy(alpha = 0.35f))
             ) {
                 Box(
                     modifier = Modifier
@@ -582,7 +582,7 @@ fun BiocodeMealItemRow(
                     dotSize = 2.4.dp,
                     dotSpacing = 0.9.dp,
                     activeColor = BiocodePalette.BioLime,
-                    inactiveColor = Color(0xFF141C0F)
+                    inactiveColor = BiocodePalette.SpruceDeck.copy(alpha = 0.55f)
                 )
                 Text(
                     text = "KCAL",

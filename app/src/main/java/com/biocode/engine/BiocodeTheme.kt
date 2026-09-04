@@ -23,7 +23,7 @@ enum class BiocodeThemeMode(
     CYBER_PINK("CYBER PINK", "Неоновый пинк и графит", "02/05"),
     CRIMSON_NAVY("CRIMSON NAVY", "Алый кримсон и бездонный нейви", "03/05"),
     FIG_CHARTREUSE("FIG CHARTREUSE", "Инжирный баклажан и шартрез", "04/05"),
-    WOOD_CYAN("NORDIC CYAN", "Березовый шпон, циан и золото", "05/05");
+    WOOD_CYAN("NORDIC WOOD", "Березовый шпон, графит и золото", "05/05");
 
     fun next(): BiocodeThemeMode {
         val values = entries
@@ -157,27 +157,27 @@ fun getBiocodeThemeColors(mode: BiocodeThemeMode): BiocodeColors {
             macroCalories = Color(0xFFDFE6B0)
         )
         BiocodeThemeMode.WOOD_CYAN -> BiocodeColors(
-            // Референс 4: #f9e7d2, #121819, #039692, #f7c800
-            noguchiCream = Color(0xFFF9E7D2),        // Березовый шпон
-            bioLime = Color(0xFFF7C800),             // Солнечное золото
-            pineTeal = Color(0xFF039692),            // Изумрудный циан
-            darkMoss = Color(0xFF121819),            // Угольный карбон
-            deepPineBg = Color(0xFF090E0F),
-            spruceDeck = Color(0xFF192527),
-            deckBorder = Color(0xFF077774),
-            deckBorderSubtle = Color(0xFF243638),
-            noguchiBorder = Color(0xFF2A3D40),
-            limeBorder = Color(0xFFFFD726),
-            pillActiveBg = Color(0xFF0B3332),
-            pillInactiveBg = Color(0xFF111718),
+            // Референс 4 «на нюансе»: #f9e7d2 (Young Wood), #121819 (Charcoal), #039692 (Cyan), #f7c800 (Yellow Gold)
+            noguchiCream = Color(0xFFF9E7D2),        // Теплый березовый шпон (Young Wood)
+            bioLime = Color(0xFFE5B842),             // Благородное теплое золото (Yellow Gold)
+            pineTeal = Color(0xFF1B292B),            // Сдержанный сланцево-нефтяной графит (без ядовитого циана!)
+            darkMoss = Color(0xFF101617),            // Глубокий угольный обсидиан (Charcoal)
+            deepPineBg = Color(0xFF0A0F10),
+            spruceDeck = Color(0xFF152022),          // Темный графитовый сланец
+            deckBorder = Color(0xFF1B4849),          // Тонкая окантовка патинированного циана
+            deckBorderSubtle = Color(0xFF122C2D),
+            noguchiBorder = Color(0xFF203537),
+            limeBorder = Color(0xFFF2C95C),          // Золотистая окантовка
+            pillActiveBg = Color(0xFF1D3537),
+            pillInactiveBg = Color(0xFF0E1516),
             pillCreamBg = Color(0xFFF9E7D2),
-            pillDarkBg = Color(0xFF151E20),
-            macroProtein = Color(0xFFF7C800),        // Белки: Золото
-            macroFat = Color(0xFF04C2BC),            // Жиры: Электрический циан
-            lipidAmber = Color(0xFFF79D00),
-            macroCarbs = Color(0xFF039692),          // Углеводы: Изумрудный циан
-            macroCarbsLight = Color(0xFF4DD0CD),
-            macroWater = Color(0xFF00F5D4),
+            pillDarkBg = Color(0xFF131D1F),
+            macroProtein = Color(0xFFE5B842),        // Белки: Золото
+            macroFat = Color(0xFF039692),            // Жиры: Благородный циан
+            lipidAmber = Color(0xFFE5A030),
+            macroCarbs = Color(0xFFD6C5B3),          // Углеводы: Текстурированный шпон
+            macroCarbsLight = Color(0xFFEAE0D5),
+            macroWater = Color(0xFF039692),
             macroCalories = Color(0xFFF9E7D2)
         )
     }

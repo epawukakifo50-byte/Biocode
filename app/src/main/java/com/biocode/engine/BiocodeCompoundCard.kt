@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -391,7 +392,7 @@ fun BiocodeCompoundBioHub(
                         dotSize = 3.0.dp,
                         dotSpacing = 1.1.dp,
                         activeColor = BiocodePalette.BioLime,
-                        inactiveColor = Color(0xFF141C0F)
+                        inactiveColor = BiocodePalette.SpruceDeck.copy(alpha = 0.55f)
                     )
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
@@ -451,6 +452,12 @@ fun BiocodeCalorieTelemetryBar(
             val activeSegments = (ratio.coerceAtMost(1f) * segmentCount).toInt()
             val hasOvercharge = ratio > 1f
 
+            val baseAccent = BiocodePalette.BioLime
+            val leadingCursorColor = lerp(baseAccent, Color.White, 0.45f)
+            val baseDeepTone = lerp(BiocodePalette.DarkMoss, baseAccent, 0.55f)
+            val inactiveBg = BiocodePalette.SpruceDeck.copy(alpha = 0.5f)
+            val inactiveBorderColor = BiocodePalette.DeckBorder.copy(alpha = 0.35f)
+
             for (i in 0 until segmentCount) {
                 val segX = i * (segmentWidth + gap)
                 val isFilled = i < activeSegments
@@ -458,16 +465,12 @@ fun BiocodeCalorieTelemetryBar(
 
                 val segColor = when {
                     hasOvercharge && i >= (segmentCount * 0.9f) -> BiocodePalette.LipidAmber
-                    isLeadingTip -> Color(0xFFEEFFAA) // Яркий световой курсор на острие импульса
+                    isLeadingTip -> leadingCursorColor
                     isFilled -> {
                         val frac = i.toFloat() / segmentCount.toFloat()
-                        if (frac < 0.45f) {
-                            Color(0xFF7FA805)
-                        } else {
-                            BiocodePalette.BioLime
-                        }
+                        lerp(baseDeepTone, baseAccent, frac)
                     }
-                    else -> Color(0xFF12190E) // Неактивная темная ячейка
+                    else -> inactiveBg
                 }
 
                 // Рисуем сегмент
@@ -478,10 +481,10 @@ fun BiocodeCalorieTelemetryBar(
                     cornerRadius = CornerRadius(segmentCorner, segmentCorner)
                 )
 
-                // Если ячейка неактивна — тонкая обводка контура
+                // Если ячейка неактивна — тонкая обводка контура в тон активной темы
                 if (!isFilled) {
                     drawRoundRect(
-                        color = Color(0xFF202C1A),
+                        color = inactiveBorderColor,
                         topLeft = Offset(segX, 0f),
                         size = Size(segmentWidth, h),
                         cornerRadius = CornerRadius(segmentCorner, segmentCorner),
@@ -489,10 +492,10 @@ fun BiocodeCalorieTelemetryBar(
                     )
                 }
 
-                // Световой ореол на острие
+                // Световой ореол на острие в тон темы
                 if (isLeadingTip) {
                     drawRoundRect(
-                        color = Color(0x66EEFFAA),
+                        color = leadingCursorColor.copy(alpha = 0.4f),
                         topLeft = Offset(segX - 1.dp.toPx(), -1.dp.toPx()),
                         size = Size(segmentWidth + 2.dp.toPx(), h + 2.dp.toPx()),
                         cornerRadius = CornerRadius(segmentCorner + 1.dp.toPx(), segmentCorner + 1.dp.toPx())
