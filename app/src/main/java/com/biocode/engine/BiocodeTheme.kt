@@ -1,5 +1,6 @@
 package com.biocode.engine
 
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -220,6 +221,11 @@ object BiocodePalette {
     val AccentCopper: Color get() = current.lipidAmber
     val SafeGreen: Color get() = current.bioLime
 }
+
+/**
+ * CompositionLocal для динамического доступа к палитре Biocode
+ */
+val LocalBiocodeColors = compositionLocalOf { BiocodePalette.current }
 
 val LiquidasiFont = FontFamily(Font(R.font.liquidasi))
 

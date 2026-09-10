@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.biocode.app.navigation.BiocodeBottomBar
 import com.biocode.app.navigation.BiocodeTab
 import com.biocode.app.screens.AddMealModal
+import com.biocode.app.screens.BiocodeMealDetailModal
 import com.biocode.app.screens.CalculatorScreen
 import com.biocode.app.screens.DiaryScreen
 import com.biocode.app.screens.MealBuilderScreen
@@ -178,6 +179,8 @@ fun BiocodeMainContainer(
     var diaryState by remember { mutableStateOf(DailyNutritionState()) }
     var currentTab by remember { mutableStateOf(BiocodeTab.TODAY) }
     var showAddMealModal by remember { mutableStateOf(false) }
+    var openAddMealWithPhoto by remember { mutableStateOf(false) }
+    var selectedMealForDetails by remember { mutableStateOf<MealEntry?>(null) }
 
     fun handleAddMeal(meal: MealEntry) {
         diaryState = diaryState.copy(
@@ -187,6 +190,22 @@ fun BiocodeMainContainer(
             currentCarbsGrams = diaryState.currentCarbsGrams + meal.carbs,
             recentMeals = listOf(meal) + diaryState.recentMeals
         )
+    }
+
+    fun handleDeleteMeal(mealId: String) {
+        val mealToRemove = diaryState.recentMeals.find { it.id == mealId }
+        if (mealToRemove != null) {
+            diaryState = diaryState.copy(
+                consumedCalories = (diaryState.consumedCalories - mealToRemove.calories).coerceAtLeast(0),
+                currentProteinGrams = (diaryState.currentProteinGrams - mealToRemove.protein).coerceAtLeast(0f),
+                currentFatGrams = (diaryState.currentFatGrams - mealToRemove.fat).coerceAtLeast(0f),
+                currentCarbsGrams = (diaryState.currentCarbsGrams - mealToRemove.carbs).coerceAtLeast(0f),
+                recentMeals = diaryState.recentMeals.filterNot { it.id == mealId }
+            )
+        }
+        if (selectedMealForDetails?.id == mealId) {
+            selectedMealForDetails = null
+        }
     }
 
     Box(
@@ -206,6 +225,11 @@ fun BiocodeMainContainer(
                 BiocodeTab.TODAY -> TodayScreen(
                     state = diaryState,
                     onStateUpdate = { diaryState = it },
+                    onMealClick = { selectedMealForDetails = it },
+                    onAddMealWithPhoto = {
+                        openAddMealWithPhoto = true
+                        showAddMealModal = true
+                    },
                     onThemeToggle = onThemeToggle,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -228,19 +252,12 @@ fun BiocodeMainContainer(
                 )
                 BiocodeTab.DIARY -> DiaryScreen(
                     state = diaryState,
-                    onAddMealClick = { showAddMealModal = true },
-                    onDeleteMeal = { mealId ->
-                        val mealToRemove = diaryState.recentMeals.find { it.id == mealId }
-                        if (mealToRemove != null) {
-                            diaryState = diaryState.copy(
-                                consumedCalories = (diaryState.consumedCalories - mealToRemove.calories).coerceAtLeast(0),
-                                currentProteinGrams = (diaryState.currentProteinGrams - mealToRemove.protein).coerceAtLeast(0f),
-                                currentFatGrams = (diaryState.currentFatGrams - mealToRemove.fat).coerceAtLeast(0f),
-                                currentCarbsGrams = (diaryState.currentCarbsGrams - mealToRemove.carbs).coerceAtLeast(0f),
-                                recentMeals = diaryState.recentMeals.filterNot { it.id == mealId }
-                            )
-                        }
+                    onAddMealClick = {
+                        openAddMealWithPhoto = false
+                        showAddMealModal = true
                     },
+                    onDeleteMeal = { mealId -> handleDeleteMeal(mealId) },
+                    onMealClick = { selectedMealForDetails = it },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -257,7 +274,10 @@ fun BiocodeMainContainer(
         BiocodeBottomBar(
             selectedTab = currentTab,
             onTabSelected = { currentTab = it },
-            onAddMealClick = { showAddMealModal = true },
+            onAddMealClick = {
+                openAddMealWithPhoto = false
+                showAddMealModal = true
+            },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
@@ -304,10 +324,25 @@ fun BiocodeMainContainer(
         // 5. МОДАЛЬНЫЙ ДИАЛОГ ДОБАВЛЕНИЯ ПРИЕМА ПИЩИ
         if (showAddMealModal) {
             AddMealModal(
-                onDismiss = { showAddMealModal = false },
+                onDismiss = {
+                    showAddMealModal = false
+                    openAddMealWithPhoto = false
+                },
                 onSaveMeal = { newMeal ->
                     handleAddMeal(newMeal)
-                }
+                    showAddMealModal = false
+                    openAddMealWithPhoto = false
+                },
+                initialPhotoLaunch = openAddMealWithPhoto
+            )
+        }
+
+        // 6. МОДАЛЬНЫЙ ДЕТАЛЬНЫЙ ПРОСМОТР БЛЮДА
+        selectedMealForDetails?.let { meal ->
+            BiocodeMealDetailModal(
+                meal = meal,
+                onDismiss = { selectedMealForDetails = null },
+                onDeleteMeal = { id -> handleDeleteMeal(id) }
             )
         }
     }

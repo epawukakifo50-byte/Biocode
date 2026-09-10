@@ -539,4 +539,119 @@ fun LucideApple(
     }
 }
 
+/**
+ * 16. ИКОНКА УДАЛЕНИЯ (LUCIDE TRASH 2)
+ */
+@Composable
+fun LucideTrash2(
+    modifier: Modifier = Modifier,
+    tint: Color = BiocodePalette.LipidAmber,
+    strokeWidthDp: Dp = 2.dp
+) {
+    Canvas(modifier = modifier) {
+        val s = size.minDimension / 24f
+        val sw = strokeWidthDp.toPx()
+        val stroke = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        // Верхняя планка
+        drawLine(tint, Offset(3f * s, 6f * s), Offset(21f * s, 6f * s), strokeWidth = sw, cap = StrokeCap.Round)
+
+        // Крышка
+        val lid = Path().apply {
+            moveTo(8f * s, 6f * s)
+            lineTo(9f * s, 3f * s)
+            lineTo(15f * s, 3f * s)
+            lineTo(16f * s, 6f * s)
+        }
+        drawPath(lid, tint, style = stroke)
+
+        // Корзина
+        val bin = Path().apply {
+            moveTo(19f * s, 6f * s)
+            lineTo(18.2f * s, 19f * s)
+            cubicTo(18.2f * s, 20.5f * s, 17f * s, 21f * s, 16f * s, 21f * s)
+            lineTo(8f * s, 21f * s)
+            cubicTo(7f * s, 21f * s, 5.8f * s, 20.5f * s, 5.8f * s, 19f * s)
+            lineTo(5f * s, 6f * s)
+        }
+        drawPath(bin, tint, style = stroke)
+
+        // Внутренние линии
+        drawLine(tint, Offset(10f * s, 11f * s), Offset(10f * s, 17f * s), strokeWidth = sw, cap = StrokeCap.Round)
+        drawLine(tint, Offset(14f * s, 11f * s), Offset(14f * s, 17f * s), strokeWidth = sw, cap = StrokeCap.Round)
+    }
+}
+
+/**
+ * 17. ИКОНКА ГАЛЕРЕИ / ИЗОБРАЖЕНИЯ (LUCIDE IMAGE)
+ */
+@Composable
+fun LucideImage(
+    modifier: Modifier = Modifier,
+    tint: Color = BiocodePalette.BioLime,
+    strokeWidthDp: Dp = 2.dp
+) {
+    Canvas(modifier = modifier) {
+        val s = size.minDimension / 24f
+        val sw = strokeWidthDp.toPx()
+        val stroke = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        // Рамка
+        drawRoundRect(
+            color = tint,
+            topLeft = Offset(3f * s, 3f * s),
+            size = Size(18f * s, 18f * s),
+            cornerRadius = CornerRadius(2.5f * s, 2.5f * s),
+            style = stroke
+        )
+
+        // Солнце/Круг
+        drawCircle(
+            color = tint,
+            radius = 1.8f * s,
+            center = Offset(8.5f * s, 8.5f * s),
+            style = stroke
+        )
+
+        // Горы/Холмы
+        val hills = Path().apply {
+            moveTo(21f * s, 15f * s)
+            lineTo(16f * s, 10f * s)
+            lineTo(5f * s, 21f * s)
+        }
+        drawPath(hills, tint, style = stroke)
+    }
+}
+
+/**
+ * 18. ИКОНКА КЛЮЧА API (LUCIDE KEY)
+ */
+@Composable
+fun LucideKey(
+    modifier: Modifier = Modifier,
+    tint: Color = BiocodePalette.BioLime,
+    strokeWidthDp: Dp = 2.dp
+) {
+    Canvas(modifier = modifier) {
+        val s = size.minDimension / 24f
+        val sw = strokeWidthDp.toPx()
+        val stroke = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        // Кольцо ключа
+        drawCircle(
+            color = tint,
+            radius = 4.5f * s,
+            center = Offset(7.5f * s, 7.5f * s),
+            style = stroke
+        )
+
+        // Стержень ключа
+        drawLine(tint, Offset(11f * s, 11f * s), Offset(21f * s, 21f * s), strokeWidth = sw, cap = StrokeCap.Round)
+
+        // Бородки ключа
+        drawLine(tint, Offset(16f * s, 16f * s), Offset(18.5f * s, 13.5f * s), strokeWidth = sw, cap = StrokeCap.Round)
+        drawLine(tint, Offset(19f * s, 19f * s), Offset(21.5f * s, 16.5f * s), strokeWidth = sw, cap = StrokeCap.Round)
+    }
+}
+
 

@@ -49,6 +49,7 @@ fun DiaryScreen(
     state: DailyNutritionState,
     onAddMealClick: () -> Unit,
     onDeleteMeal: (String) -> Unit,
+    onMealClick: (MealEntry) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -239,6 +240,7 @@ fun DiaryScreen(
                 } else {
                     BiocodeMealList(
                         meals = state.recentMeals,
+                        onMealClick = onMealClick,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

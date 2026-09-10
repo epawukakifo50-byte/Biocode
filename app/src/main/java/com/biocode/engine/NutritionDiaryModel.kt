@@ -22,7 +22,10 @@ data class MealEntry(
     val fat: Float,
     val carbs: Float,
     val time: String,
-    val isBiocodeVerified: Boolean = true
+    val isBiocodeVerified: Boolean = true,
+    val description: String = "",
+    val weightGrams: Int? = null,
+    val photoUri: String? = null
 )
 
 /**
@@ -43,10 +46,54 @@ data class DailyNutritionState(
     val glycemicScore: Int = 92, // 0..100
     val metabolicPhase: String = "АНАБОЛИЧЕСКИЙ ДОК // ФАЗА 2",
     val recentMeals: List<MealEntry> = listOf(
-        MealEntry("1", "Овсянка с миндалем и изолятом", MealType.BREAKFAST, 540, 38f, 14f, 62f, "08:30"),
-        MealEntry("2", "Лосось на пару, киноа и спаржа", MealType.LUNCH, 780, 52f, 26f, 74f, "13:45"),
-        MealEntry("3", "Матча-смузи", MealType.SNACK, 220, 8f, 6f, 32f, "16:20"),
-        MealEntry("4", "Запеченное филе индейки с пряными травами и бататом", MealType.DINNER, 500, 44f, 10f, 56f, "19:50")
+        MealEntry(
+            id = "1",
+            name = "Овсянка с миндалем и изолятом",
+            type = MealType.BREAKFAST,
+            calories = 540,
+            protein = 38f,
+            fat = 14f,
+            carbs = 62f,
+            time = "08:30",
+            description = "Цельнозерновой овес длительной варки, миндальные лепестки, сывороточный изолят, щепотка цейлонской корицы",
+            weightGrams = 320
+        ),
+        MealEntry(
+            id = "2",
+            name = "Лосось на пару, киноа и спаржа",
+            type = MealType.LUNCH,
+            calories = 780,
+            protein = 52f,
+            fat = 26f,
+            carbs = 74f,
+            time = "13:45",
+            description = "Филе дикого лосося на пару со спаржей аль денте, перуанское белое киноа с оливковым маслом первого отжима",
+            weightGrams = 420
+        ),
+        MealEntry(
+            id = "3",
+            name = "Матча-смузи",
+            type = MealType.SNACK,
+            calories = 220,
+            protein = 8f,
+            fat = 6f,
+            carbs = 32f,
+            time = "16:20",
+            description = "Церемониальная японская матча Uji, кокосовое молоко без сахара, семена чиа, шпинат",
+            weightGrams = 280
+        ),
+        MealEntry(
+            id = "4",
+            name = "Запеченное филе индейки с пряными травами и бататом",
+            type = MealType.DINNER,
+            calories = 500,
+            protein = 44f,
+            fat = 10f,
+            carbs = 56f,
+            time = "19:50",
+            description = "Грудка индейки su-vide с розмарином и чесноком, запеченный батат с морской солью",
+            weightGrams = 360
+        )
     )
 ) {
     val remainingCalories: Int

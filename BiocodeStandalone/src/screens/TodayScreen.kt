@@ -39,6 +39,8 @@ import com.biocode.engine.MealType
 fun TodayScreen(
     state: DailyNutritionState,
     onStateUpdate: (DailyNutritionState) -> Unit,
+    onMealClick: (MealEntry) -> Unit = {},
+    onAddMealWithPhoto: () -> Unit = {},
     onThemeToggle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -94,27 +96,7 @@ fun TodayScreen(
                             )
                         )
                     },
-                    onScanClick = {
-                        val newMeal = MealEntry(
-                            id = System.currentTimeMillis().toString(),
-                            name = "Боул с лососем и киноа",
-                            type = MealType.LUNCH,
-                            calories = 490,
-                            protein = 44f,
-                            fat = 16f,
-                            carbs = 42f,
-                            time = "14:15"
-                        )
-                        onStateUpdate(
-                            state.copy(
-                                consumedCalories = state.consumedCalories + newMeal.calories,
-                                currentProteinGrams = state.currentProteinGrams + newMeal.protein,
-                                currentFatGrams = state.currentFatGrams + newMeal.fat,
-                                currentCarbsGrams = state.currentCarbsGrams + newMeal.carbs,
-                                recentMeals = listOf(newMeal) + state.recentMeals
-                            )
-                        )
-                    },
+                    onScanClick = onAddMealWithPhoto,
                     onThemeToggle = onThemeToggle,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -152,6 +134,7 @@ fun TodayScreen(
 
                 BiocodeMealList(
                     meals = state.recentMeals,
+                    onMealClick = onMealClick,
                     modifier = Modifier.fillMaxWidth()
                 )
 
