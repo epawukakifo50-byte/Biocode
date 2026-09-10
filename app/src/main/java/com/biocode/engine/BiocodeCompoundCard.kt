@@ -198,8 +198,18 @@ fun BiocodeCompoundBioHub(
     onProteinBoost: () -> Unit,
     onScanClick: () -> Unit,
     onThemeToggle: () -> Unit = {},
+    bmrCalories: Int = 1750,
+    workoutBurnCalories: Int = 420,
     modifier: Modifier = Modifier
 ) {
+    val totalExpended = bmrCalories + workoutBurnCalories
+    val netBalance = state.consumedCalories - totalExpended
+    val ratioBurnVsIntake = if (state.consumedCalories > 0) {
+        ((totalExpended.toFloat() / state.consumedCalories.toFloat()) * 100).toInt()
+    } else {
+        100
+    }
+
     val plateShape = BiocodeCompoundPlateShape(
         spineWidthDp = 48.dp,
         topHeaderHeightDp = 62.dp,
@@ -316,7 +326,7 @@ fun BiocodeCompoundBioHub(
             )
         }
 
-        // 3. КНОПКА ФОТОСЪЕМКИ ЕДЫ (ПЕРЕНЕСЕНА ВПРАВО)
+        // 2. КНОПКА PHOTO
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -347,7 +357,7 @@ fun BiocodeCompoundBioHub(
             }
         }
 
-        // 3. ВЛОЖЕННЫЙ МОДУЛЬ ЭНЕРГОРАСХОДА В КАРМАНЕ (НЕ ВЫПОЛЗАЕТ ЗА ЭКРАН!)
+        // 3. ВЛОЖЕННЫЙ МОДУЛЬ ЭНЕРГОРАСХОДА В КАРМАНЕ (ОПЕРАТИВНЫЙ КАЛЬКУЛЯТОР)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -368,42 +378,56 @@ fun BiocodeCompoundBioHub(
                 ) {
                     Text(
                         text = "СУТОЧНЫЙ ЭНЕРГОРАСХОД",
-                        style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.5.sp),
+                        style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp),
                         color = BiocodePalette.NoguchiCream.copy(alpha = 0.7f),
                         maxLines = 1
                     )
                     Text(
-                        text = "ОСТАТОК: ${state.remainingCalories} KCAL",
+                        text = "БАЛАНС: ${if (netBalance >= 0) "+$netBalance" else "$netBalance"} KCAL",
                         style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.5.sp),
-                        color = BiocodePalette.BioLime,
+                        color = if (netBalance >= 0) BiocodePalette.BioLime else BiocodePalette.LipidAmber,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
                 }
 
-                // LED 5x7 растровые цифры
+                // LED 5x7 растровые цифры и оперативная сводка расхода
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    BiocodeDotMatrixText(
-                        text = "${state.consumedCalories}",
-                        dotSize = 3.0.dp,
-                        dotSpacing = 1.1.dp,
-                        activeColor = BiocodePalette.BioLime,
-                        inactiveColor = BiocodePalette.SpruceDeck.copy(alpha = 0.55f)
-                    )
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "ЦЕЛЬ",
-                            style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp),
-                            color = BiocodePalette.NoguchiCream.copy(alpha = 0.5f)
+                    Column {
+                        BiocodeDotMatrixText(
+                            text = "${state.consumedCalories}",
+                            dotSize = 3.0.dp,
+                            dotSpacing = 1.1.dp,
+                            activeColor = BiocodePalette.BioLime,
+                            inactiveColor = BiocodePalette.SpruceDeck.copy(alpha = 0.55f)
                         )
                         Text(
-                            text = "${state.targetCalories}",
-                            style = BiocodeTypography.MonospaceTitle.copy(fontSize = 18.sp),
-                            color = BiocodePalette.NoguchiCream
+                            text = "ПОСТУПЛЕНИЕ (ЕДА)",
+                            style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.sp),
+                            color = BiocodePalette.BioLime
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "РАСХОД: $totalExpended KCAL",
+                            style = BiocodeTypography.MonospaceTitle.copy(fontSize = 13.sp),
+                            color = BiocodePalette.LipidAmber,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "BMR $bmrCalories + ТРЕН $workoutBurnCalories",
+                            style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.5.sp),
+                            color = BiocodePalette.NoguchiCream.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            text = "ЦЕЛЬ: ${state.targetCalories} KCAL",
+                            style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.5.sp),
+                            color = BiocodePalette.NoguchiCream.copy(alpha = 0.5f)
                         )
                     }
                 }
@@ -412,6 +436,7 @@ fun BiocodeCompoundBioHub(
                 BiocodeCalorieTelemetryBar(
                     consumed = state.consumedCalories,
                     target = state.targetCalories,
+                    burnVsIntakePercent = ratioBurnVsIntake,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -426,6 +451,7 @@ fun BiocodeCompoundBioHub(
 fun BiocodeCalorieTelemetryBar(
     consumed: Int,
     target: Int,
+    burnVsIntakePercent: Int = 100,
     modifier: Modifier = Modifier
 ) {
     val ratio = if (target > 0) (consumed.toFloat() / target.toFloat()).coerceIn(0f, 1.25f) else 0f
@@ -536,9 +562,9 @@ fun BiocodeCalorieTelemetryBar(
                         .background(if (ratio >= 1f) BiocodePalette.LipidAmber else BiocodePalette.BioLime)
                 )
                 Text(
-                    text = "$percentInt% БИО-ЗАРЯД",
+                    text = "$percentInt% БИО-ЗАРЯД  //  РАСХОД: $burnVsIntakePercent%",
                     style = BiocodeTypography.TelemetryLabel.copy(
-                        fontSize = 8.sp,
+                        fontSize = 7.5.sp,
                         fontWeight = FontWeight.Bold
                     ),
                     color = if (ratio >= 1f) BiocodePalette.LipidAmber else BiocodePalette.BioLime

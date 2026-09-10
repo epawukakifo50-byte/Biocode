@@ -49,21 +49,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.biocode.app.navigation.BiocodeBottomBar
 import com.biocode.app.navigation.BiocodeTab
+import com.biocode.app.screens.AddActivityModal
 import com.biocode.app.screens.AddMealModal
 import com.biocode.app.screens.BiocodeMealDetailModal
 import com.biocode.app.screens.CalculatorScreen
 import com.biocode.app.screens.DiaryScreen
 import com.biocode.app.screens.MealBuilderScreen
 import com.biocode.app.screens.TodayScreen
+import com.biocode.app.screens.WorkoutConstructorScreen
 import com.biocode.engine.BiocodeColors
 import com.biocode.engine.BiocodePalette
 import com.biocode.engine.BiocodeThemeMode
 import com.biocode.engine.BiocodeTypography
+import com.biocode.engine.BiometricsProfile
 import com.biocode.engine.DailyNutritionState
+import com.biocode.engine.DefaultKineticData
+import com.biocode.engine.ExerciseCategory
+import com.biocode.engine.ExerciseItem
+import com.biocode.engine.HubMode
 import com.biocode.engine.LucideSparkles
 import com.biocode.engine.MealEntry
+import com.biocode.engine.WorkoutSession
 import com.biocode.engine.getBiocodeThemeColors
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -178,18 +189,54 @@ fun BiocodeMainContainer(
 ) {
     var diaryState by remember { mutableStateOf(DailyNutritionState()) }
     var currentTab by remember { mutableStateOf(BiocodeTab.TODAY) }
+    var currentHubMode by remember { mutableStateOf(HubMode.METABOLIC) }
+    var biometricsProfile by remember { mutableStateOf(BiometricsProfile()) }
+    var kineticWorkouts by remember { mutableStateOf(DefaultKineticData.createInitialWorkouts()) }
+
     var showAddMealModal by remember { mutableStateOf(false) }
     var openAddMealWithPhoto by remember { mutableStateOf(false) }
+    var editingMeal by remember { mutableStateOf<MealEntry?>(null) }
     var selectedMealForDetails by remember { mutableStateOf<MealEntry?>(null) }
+    var showAddActivityModal by remember { mutableStateOf(false) }
 
-    fun handleAddMeal(meal: MealEntry) {
-        diaryState = diaryState.copy(
-            consumedCalories = diaryState.consumedCalories + meal.calories,
-            currentProteinGrams = diaryState.currentProteinGrams + meal.protein,
-            currentFatGrams = diaryState.currentFatGrams + meal.fat,
-            currentCarbsGrams = diaryState.currentCarbsGrams + meal.carbs,
-            recentMeals = listOf(meal) + diaryState.recentMeals
-        )
+    val todayDate = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
+    val bmrCalories: Int = remember(biometricsProfile) { biometricsProfile.calculateBmr() }
+    val workoutBurnCalories: Int = remember(kineticWorkouts, todayDate) {
+        val todaySessions = kineticWorkouts.filter { it.date == todayDate }
+        if (todaySessions.isNotEmpty()) todaySessions.sumOf { it.totalCaloriesBurned } else 460
+    }
+
+    fun handleSaveMeal(meal: MealEntry) {
+        val existingIndex = diaryState.recentMeals.indexOfFirst { it.id == meal.id }
+        if (existingIndex != -1) {
+            // Редактирование существующего приема пищи (Требование 1.3)
+            val updatedMeals = diaryState.recentMeals.toMutableList()
+            val oldMeal = updatedMeals[existingIndex]
+            updatedMeals[existingIndex] = meal
+
+            val calDiff = meal.calories - oldMeal.calories
+            val protDiff = meal.protein - oldMeal.protein
+            val fatDiff = meal.fat - oldMeal.fat
+            val carbsDiff = meal.carbs - oldMeal.carbs
+
+            diaryState = diaryState.copy(
+                consumedCalories = (diaryState.consumedCalories + calDiff).coerceAtLeast(0),
+                currentProteinGrams = (diaryState.currentProteinGrams + protDiff).coerceAtLeast(0f),
+                currentFatGrams = (diaryState.currentFatGrams + fatDiff).coerceAtLeast(0f),
+                currentCarbsGrams = (diaryState.currentCarbsGrams + carbsDiff).coerceAtLeast(0f),
+                recentMeals = updatedMeals
+            )
+        } else {
+            // Добавление нового приема пищи
+            diaryState = diaryState.copy(
+                consumedCalories = diaryState.consumedCalories + meal.calories,
+                currentProteinGrams = diaryState.currentProteinGrams + meal.protein,
+                currentFatGrams = diaryState.currentFatGrams + meal.fat,
+                currentCarbsGrams = diaryState.currentCarbsGrams + meal.carbs,
+                recentMeals = listOf(meal) + diaryState.recentMeals
+            )
+        }
+        editingMeal = null
     }
 
     fun handleDeleteMeal(mealId: String) {
@@ -208,6 +255,35 @@ fun BiocodeMainContainer(
         }
     }
 
+    fun handleSaveExercise(newEx: ExerciseItem, category: ExerciseCategory) {
+        val todayIndex = kineticWorkouts.indexOfFirst { it.date == todayDate }
+        if (todayIndex != -1) {
+            val todaySession = kineticWorkouts[todayIndex]
+            val updatedSession = todaySession.copy(
+                totalCaloriesBurned = todaySession.totalCaloriesBurned + newEx.caloriesBurned,
+                durationMinutes = todaySession.durationMinutes + newEx.durationMinutes,
+                exercises = todaySession.exercises + newEx
+            )
+            val updatedList = kineticWorkouts.toMutableList()
+            updatedList[todayIndex] = updatedSession
+            kineticWorkouts = updatedList
+        } else {
+            val newSession = WorkoutSession(
+                id = "w_${System.currentTimeMillis()}",
+                title = "Комплекс ${category.label}",
+                description = "Индивидуальная кинетическая сессия",
+                date = todayDate,
+                time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()),
+                category = category,
+                totalCaloriesBurned = newEx.caloriesBurned,
+                durationMinutes = newEx.durationMinutes,
+                exercises = listOf(newEx)
+            )
+            kineticWorkouts = listOf(newSession) + kineticWorkouts
+        }
+        showAddActivityModal = false
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -215,12 +291,12 @@ fun BiocodeMainContainer(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        // 1. КОНТЕНТ АКТИВНОГО ЭКРАНА
+        // 1. КОНТЕНТ АКТИВНОГО ЭКРАНА С СИНХРОНИЗАЦИЕЙ ХАБОВ
         Crossfade(
-            targetState = currentTab,
+            targetState = currentTab to currentHubMode,
             label = "tab_crossfade",
             modifier = Modifier.fillMaxSize()
-        ) { tab ->
+        ) { (tab, hub) ->
             when (tab) {
                 BiocodeTab.TODAY -> TodayScreen(
                     state = diaryState,
@@ -228,18 +304,42 @@ fun BiocodeMainContainer(
                     onMealClick = { selectedMealForDetails = it },
                     onAddMealWithPhoto = {
                         openAddMealWithPhoto = true
+                        editingMeal = null
                         showAddMealModal = true
                     },
                     onThemeToggle = onThemeToggle,
+                    hubMode = hub,
+                    onToggleHubMode = {
+                        currentHubMode = if (currentHubMode == HubMode.METABOLIC) HubMode.KINETIC else HubMode.METABOLIC
+                    },
+                    bmrCalories = bmrCalories,
+                    workoutBurnCalories = workoutBurnCalories,
+                    kineticWorkouts = kineticWorkouts,
+                    onAddActivityClick = { showAddActivityModal = true },
                     modifier = Modifier.fillMaxSize()
                 )
-                BiocodeTab.MEAL_BUILDER -> MealBuilderScreen(
-                    state = diaryState,
-                    onAddMeal = { handleAddMeal(it) },
-                    modifier = Modifier.fillMaxSize()
-                )
+
+                BiocodeTab.MEAL_BUILDER -> {
+                    if (hub == HubMode.KINETIC) {
+                        WorkoutConstructorScreen(
+                            onAddCustomWorkout = { showAddActivityModal = true },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        MealBuilderScreen(
+                            state = diaryState,
+                            onAddMeal = { handleSaveMeal(it) },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+
                 BiocodeTab.CALCULATOR -> CalculatorScreen(
                     state = diaryState,
+                    currentProfile = biometricsProfile,
+                    onUpdateProfile = { updatedProfile ->
+                        biometricsProfile = updatedProfile
+                    },
                     onUpdateTargets = { cals, prot, fat, carbs ->
                         diaryState = diaryState.copy(
                             targetCalories = cals,
@@ -250,10 +350,12 @@ fun BiocodeMainContainer(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+
                 BiocodeTab.DIARY -> DiaryScreen(
                     state = diaryState,
                     onAddMealClick = {
                         openAddMealWithPhoto = false
+                        editingMeal = null
                         showAddMealModal = true
                     },
                     onDeleteMeal = { mealId -> handleDeleteMeal(mealId) },
@@ -270,14 +372,20 @@ fun BiocodeMainContainer(
             modifier = Modifier.fillMaxSize()
         )
 
-        // 3. 5-КНОПОЧНЫЙ НАВИГАЦИОННЫЙ БАР
+        // 3. 5-КНОПОЧНЫЙ НАВИГАЦИОННЫЙ БАР С ПОДДЕРЖКОЙ KINETIC HUB
         BiocodeBottomBar(
             selectedTab = currentTab,
             onTabSelected = { currentTab = it },
             onAddMealClick = {
-                openAddMealWithPhoto = false
-                showAddMealModal = true
+                if (currentHubMode == HubMode.KINETIC) {
+                    showAddActivityModal = true
+                } else {
+                    openAddMealWithPhoto = false
+                    editingMeal = null
+                    showAddMealModal = true
+                }
             },
+            hubMode = currentHubMode,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
@@ -321,28 +429,47 @@ fun BiocodeMainContainer(
             }
         }
 
-        // 5. МОДАЛЬНЫЙ ДИАЛОГ ДОБАВЛЕНИЯ ПРИЕМА ПИЩИ
+        // 5. МОДАЛЬНЫЙ ДИАЛОГ ДОБАВЛЕНИЯ / РЕДАКТИРОВАНИЯ ПРИЕМА ПИЩИ (Требование 1.3)
         if (showAddMealModal) {
             AddMealModal(
                 onDismiss = {
                     showAddMealModal = false
                     openAddMealWithPhoto = false
+                    editingMeal = null
                 },
-                onSaveMeal = { newMeal ->
-                    handleAddMeal(newMeal)
+                onSaveMeal = { savedMeal ->
+                    handleSaveMeal(savedMeal)
                     showAddMealModal = false
                     openAddMealWithPhoto = false
+                    editingMeal = null
                 },
+                initialMeal = editingMeal,
                 initialPhotoLaunch = openAddMealWithPhoto
             )
         }
 
-        // 6. МОДАЛЬНЫЙ ДЕТАЛЬНЫЙ ПРОСМОТР БЛЮДА
+        // 6. МОДАЛЬНЫЙ ДЕТАЛЬНЫЙ ПРОСМОТР БЛЮДА С КНОПКОЙ РЕДАКТИРОВАНИЯ (Требование 1.3)
         selectedMealForDetails?.let { meal ->
             BiocodeMealDetailModal(
                 meal = meal,
                 onDismiss = { selectedMealForDetails = null },
-                onDeleteMeal = { id -> handleDeleteMeal(id) }
+                onDeleteMeal = { id -> handleDeleteMeal(id) },
+                onEditMeal = { mealToEdit ->
+                    selectedMealForDetails = null
+                    editingMeal = mealToEdit
+                    showAddMealModal = true
+                }
+            )
+        }
+
+        // 7. МОДАЛЬНЫЙ ДИАЛОГ ДОБАВЛЕНИЯ АКТИВНОСТИ С ИИ РАСЧЕТОМ (Требование 2.3)
+        if (showAddActivityModal) {
+            AddActivityModal(
+                userProfile = biometricsProfile,
+                onDismiss = { showAddActivityModal = false },
+                onSaveExercise = { newEx, category ->
+                    handleSaveExercise(newEx, category)
+                }
             )
         }
     }
@@ -360,7 +487,6 @@ fun BiocodeShockwaveOverlay(
     val progress = remember { Animatable(1f) }
     val density = LocalDensity.current
 
-    // Центр стыковочного узла на экране (~45.dp от левого края, ~225.dp от верха контента)
     val originX = with(density) { 45.dp.toPx() }
     val originY = with(density) { 225.dp.toPx() }
 
@@ -383,7 +509,7 @@ fun BiocodeShockwaveOverlay(
         Canvas(modifier = modifier) {
             val centerOffset = Offset(originX, originY)
 
-            // 1. Мягкое биоморфное световое поле внутри фронта (радиус строго > 0)
+            // 1. Мягкое биоморфное световое поле внутри фронта
             if (p < 0.75f) {
                 val glowRadius = (radius * 1.1f).coerceAtLeast(20f)
                 drawCircle(

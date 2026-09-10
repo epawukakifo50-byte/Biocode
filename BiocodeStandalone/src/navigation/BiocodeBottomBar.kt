@@ -66,6 +66,7 @@ fun BiocodeBottomBar(
     selectedTab: BiocodeTab,
     onTabSelected: (BiocodeTab) -> Unit,
     onAddMealClick: () -> Unit,
+    hubMode: com.biocode.engine.HubMode = com.biocode.engine.HubMode.METABOLIC,
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -124,9 +125,9 @@ fun BiocodeBottomBar(
                     LucideCalendar(modifier = Modifier.size(20.dp), tint = tint)
                 }
 
-                // 2. «Что поесть»
+                // 2. «Что поесть» // «Конструктор»
                 NavTabItem(
-                    title = BiocodeTab.MEAL_BUILDER.title,
+                    title = if (hubMode == com.biocode.engine.HubMode.KINETIC) "Конструктор" else BiocodeTab.MEAL_BUILDER.title,
                     isSelected = selectedTab == BiocodeTab.MEAL_BUILDER,
                     onClick = {
                         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -134,7 +135,11 @@ fun BiocodeBottomBar(
                     },
                     modifier = Modifier.weight(1f)
                 ) { tint ->
-                    LucideUtensils(modifier = Modifier.size(20.dp), tint = tint)
+                    if (hubMode == com.biocode.engine.HubMode.KINETIC) {
+                        com.biocode.engine.LucideDumbbell(modifier = Modifier.size(20.dp), tint = tint)
+                    } else {
+                        LucideUtensils(modifier = Modifier.size(20.dp), tint = tint)
+                    }
                 }
 
                 // Пространство под центральную акцентную кнопку

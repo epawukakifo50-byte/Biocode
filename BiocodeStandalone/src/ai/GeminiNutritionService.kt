@@ -309,4 +309,178 @@ object GeminiNutritionService {
             null
         }
     }
+
+    /**
+     * Расчет биометрического профиля и калоража покоя (BMR) через ИИ Gemini
+     */
+    suspend fun calculateBiometricsAI(
+        context: Context,
+        gender: com.biocode.engine.Gender,
+        age: Int,
+        weightKg: Float,
+        heightCm: Float,
+        mode: com.biocode.engine.TargetMetabolicMode
+    ): com.biocode.engine.BiometricsProfile = withContext(Dispatchers.IO) {
+        val apiKey = getApiKey(context)
+        val defaultProfile = com.biocode.engine.BiometricsProfile.computeDefaultProfile(gender, weightKg, heightCm, age, mode)
+
+        if (apiKey.isBlank()) {
+            return@withContext defaultProfile
+        }
+
+        try {
+            val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$apiKey"
+            val prompt = buildString {
+                appendLine("Ты — биохимический физиолог и спортивный метаболограф Biocode.")
+                appendLine("Рассчитай научно обоснованный метаболический профиль человека:")
+                appendLine("- Пол: ${gender.label}")
+                appendLine("- Возраст: $age лет")
+                appendLine("- Вес: $weightKg кг")
+                appendLine("- Рост: $heightCm см")
+                appendLine("- Режим: ${mode.label} (${mode.desc})")
+                appendLine("КРИТИЧЕСКИ ВАЖНО рассчитать:")
+                appendLine("1. bmrCalories: Базовый метаболизм в состоянии абсолютного покоя (будто человек просто лежит целый день и ничего не делает).")
+                appendLine("2. targetDailyCalories: целевой суточный калораж для выбранного режима.")
+                appendLine("3. targetBurnCalories: рекомендуемый активный расход энергии на день.")
+                appendLine("4. protein, fat, carbs: распределение макронутриентов в граммах.")
+                appendLine("Ответь СТРОГО в формате JSON без markdown:")
+                appendLine("{\"bmrCalories\": 1800, \"targetDailyCalories\": 2400, \"targetBurnCalories\": 600, \"protein\": 150, \"fat\": 75, \"carbs\": 280}")
+            }
+
+            val reqJson = JSONObject().apply {
+                put("contents", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("parts", JSONArray().apply {
+                            put(JSONObject().apply { put("text", prompt) })
+                        })
+                    })
+                })
+                put("generationConfig", JSONObject().apply {
+                    put("response_mime_type", "application_json")
+                    put("temperature", 0.2)
+                })
+            }
+
+            val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                doOutput = true
+                connectTimeout = 8000
+                readTimeout = 10000
+            }
+
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(reqJson.toString()) }
+
+            if (conn.responseCode == 200) {
+                val respText = conn.inputStream.bufferedReader().use { it.readText() }
+                val root = JSONObject(respText)
+                val cand = root.getJSONArray("candidates").getJSONObject(0)
+                val content = cand.getJSONObject("content")
+                val text = content.getJSONArray("parts").getJSONObject(0).getString("text")
+                val json = JSONObject(text)
+
+                return@withContext com.biocode.engine.BiometricsProfile(
+                    gender = gender,
+                    age = age,
+                    weightKg = weightKg,
+                    heightCm = heightCm,
+                    targetMode = mode,
+                    bmrCalories = json.optInt("bmrCalories", defaultProfile.bmrCalories),
+                    targetDailyCalories = json.optInt("targetDailyCalories", defaultProfile.targetDailyCalories),
+                    targetBurnCalories = json.optInt("targetBurnCalories", defaultProfile.targetBurnCalories),
+                    targetProteinGrams = json.optDouble("protein", defaultProfile.targetProteinGrams.toDouble()).toFloat(),
+                    targetFatGrams = json.optDouble("fat", defaultProfile.targetFatGrams.toDouble()).toFloat(),
+                    targetCarbsGrams = json.optDouble("carbs", defaultProfile.targetCarbsGrams.toDouble()).toFloat()
+                )
+            } else {
+                defaultProfile
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Biometrics AI error: ${e.message}")
+            defaultProfile
+        }
+    }
+
+    /**
+     * Расчет сожженных калорий в упражнении через ИИ Gemini с учетом биометрии
+     */
+    suspend fun calculateExerciseBurnAI(
+        context: Context,
+        exerciseName: String,
+        description: String,
+        feelingsRpe: String,
+        sets: Int,
+        repsOrTime: String,
+        durationMinutes: Int,
+        weightKg: Float
+    ): Int = withContext(Dispatchers.IO) {
+        val apiKey = getApiKey(context)
+
+        // Оффлайн fallback по формуле MET
+        val isCardio = exerciseName.contains("бег", true) || exerciseName.contains("кардио", true) ||
+                exerciseName.contains("гребл", true) || exerciseName.contains("велик", true) ||
+                exerciseName.contains("эргометр", true) || exerciseName.contains("hiit", true)
+        val met = if (isCardio) 8.5f else 5.5f
+        val fallbackBurn = (met * weightKg * (durationMinutes / 60f)).toInt().coerceIn(30, 1200)
+
+        if (apiKey.isBlank()) {
+            return@withContext fallbackBurn
+        }
+
+        try {
+            val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$apiKey"
+            val prompt = buildString {
+                appendLine("Ты — физиолог физических нагрузок Biocode Kinetic Engine.")
+                appendLine("Рассчитай расход энергии (ккал) для тренировочного упражнения с учетом биометрии спортсмена:")
+                appendLine("- Вес спортсмена: $weightKg кг")
+                appendLine("- Упражнение: $exerciseName")
+                appendLine("- Описание и биомеханика: $description")
+                appendLine("- Субъективные ощущения/RPE: $feelingsRpe")
+                appendLine("- Подходы: $sets, повторения/время: $repsOrTime")
+                appendLine("- Время выполнения: $durationMinutes минут")
+                appendLine("Ответь СТРОГО в формате JSON без markdown:")
+                appendLine("{\"caloriesBurned\": 120}")
+            }
+
+            val reqJson = JSONObject().apply {
+                put("contents", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("parts", JSONArray().apply {
+                            put(JSONObject().apply { put("text", prompt) })
+                        })
+                    })
+                })
+                put("generationConfig", JSONObject().apply {
+                    put("response_mime_type", "application_json")
+                    put("temperature", 0.2)
+                })
+            }
+
+            val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                doOutput = true
+                connectTimeout = 8000
+                readTimeout = 10000
+            }
+
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { it.write(reqJson.toString()) }
+
+            if (conn.responseCode == 200) {
+                val respText = conn.inputStream.bufferedReader().use { it.readText() }
+                val root = JSONObject(respText)
+                val cand = root.getJSONArray("candidates").getJSONObject(0)
+                val content = cand.getJSONObject("content")
+                val text = content.getJSONArray("parts").getJSONObject(0).getString("text")
+                val json = JSONObject(text)
+                json.optInt("caloriesBurned", fallbackBurn)
+            } else {
+                fallbackBurn
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exercise AI error: ${e.message}")
+            fallbackBurn
+        }
+    }
 }
+

@@ -84,7 +84,8 @@ import java.io.File
 fun AddMealModal(
     onDismiss: () -> Unit,
     onSaveMeal: (MealEntry) -> Unit,
-    initialPhotoLaunch: Boolean = false
+    initialPhotoLaunch: Boolean = false,
+    initialMeal: MealEntry? = null
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -92,18 +93,18 @@ fun AddMealModal(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Поля ввода
-    var mealName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var weightGramsStr by remember { mutableStateOf("") }
-    var caloriesStr by remember { mutableStateOf("") }
-    var proteinStr by remember { mutableStateOf("") }
-    var fatStr by remember { mutableStateOf("") }
-    var carbsStr by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(MealType.LUNCH) }
+    // Поля ввода (инициализация из initialMeal если режим редактирования)
+    var mealName by remember { mutableStateOf(initialMeal?.name ?: "") }
+    var description by remember { mutableStateOf(initialMeal?.description ?: "") }
+    var weightGramsStr by remember { mutableStateOf(initialMeal?.weightGrams?.toString() ?: "") }
+    var caloriesStr by remember { mutableStateOf(initialMeal?.calories?.toString() ?: "") }
+    var proteinStr by remember { mutableStateOf(initialMeal?.protein?.toInt()?.toString() ?: "") }
+    var fatStr by remember { mutableStateOf(initialMeal?.fat?.toInt()?.toString() ?: "") }
+    var carbsStr by remember { mutableStateOf(initialMeal?.carbs?.toInt()?.toString() ?: "") }
+    var selectedType by remember { mutableStateOf(initialMeal?.type ?: MealType.LUNCH) }
 
     // Фото и ИИ состояние
-    var photoUriStr by remember { mutableStateOf<String?>(null) }
+    var photoUriStr by remember { mutableStateOf<String?>(initialMeal?.photoUri) }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     var isAiLoading by remember { mutableStateOf(false) }
     var aiStatusBanner by remember { mutableStateOf<String?>(null) }
@@ -219,13 +220,13 @@ fun AddMealModal(
                         }
                         Column {
                             Text(
-                                text = "НОВЫЙ ПРИЕМ ПИЩИ",
+                                text = if (initialMeal != null) "РЕДАКТИРОВАНИЕ ПРИЕМА" else "НОВЫЙ ПРИЕМ ПИЩИ",
                                 style = BiocodeTypography.TabLabel,
                                 color = BiocodePalette.NoguchiCream,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "БИО-ЛОГИРОВАНИЕ & ИИ-РАСЧЕТ",
+                                text = if (initialMeal != null) "КОРРЕКТИРОВКА БИО-СОСТАВА" else "БИО-ЛОГИРОВАНИЕ & ИИ-РАСЧЕТ",
                                 style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp),
                                 color = BiocodePalette.BioLime
                             )
@@ -714,14 +715,15 @@ fun AddMealModal(
                             val currentTimeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
 
                             val entry = MealEntry(
-                                id = System.currentTimeMillis().toString(),
+                                id = initialMeal?.id ?: System.currentTimeMillis().toString(),
                                 name = title,
                                 type = selectedType,
                                 calories = cals,
                                 protein = prot,
                                 fat = fat,
                                 carbs = carb,
-                                time = currentTimeStr,
+                                time = initialMeal?.time ?: currentTimeStr,
+                                date = initialMeal?.date ?: java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()),
                                 description = description,
                                 weightGrams = grams,
                                 photoUri = photoUriStr
@@ -735,13 +737,23 @@ fun AddMealModal(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        LucidePlus(modifier = Modifier.size(16.dp), tint = BiocodePalette.DarkMoss)
-                        Text(
-                            text = "ДОБАВИТЬ В ДНЕВНИК",
-                            style = BiocodeTypography.TabLabel,
-                            color = BiocodePalette.DarkMoss,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (initialMeal != null) {
+                            LucideCheck(modifier = Modifier.size(16.dp), tint = BiocodePalette.DarkMoss)
+                            Text(
+                                text = "СОХРАНИТЬ ИЗМЕНЕНИЯ",
+                                style = BiocodeTypography.TabLabel,
+                                color = BiocodePalette.DarkMoss,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            LucidePlus(modifier = Modifier.size(16.dp), tint = BiocodePalette.DarkMoss)
+                            Text(
+                                text = "ДОБАВИТЬ В ДНЕВНИК",
+                                style = BiocodeTypography.TabLabel,
+                                color = BiocodePalette.DarkMoss,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

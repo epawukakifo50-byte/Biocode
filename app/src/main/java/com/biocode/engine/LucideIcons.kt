@@ -654,4 +654,87 @@ fun LucideKey(
     }
 }
 
+/**
+ * 19. ИКОНКА РЕДАКТИРОВАНИЯ (LUCIDE EDIT / PENCIL)
+ */
+@Composable
+fun LucideEdit(
+    modifier: Modifier = Modifier,
+    tint: Color = BiocodePalette.BioLime,
+    strokeWidthDp: Dp = 2.dp
+) {
+    Canvas(modifier = modifier) {
+        val s = size.minDimension / 24f
+        val sw = strokeWidthDp.toPx()
+        val stroke = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        // Контур карандаша
+        val pencilPath = Path().apply {
+            moveTo(17f * s, 3f * s)
+            lineTo(21f * s, 7f * s)
+            lineTo(7f * s, 21f * s)
+            lineTo(3f * s, 21f * s)
+            lineTo(3f * s, 17f * s)
+            close()
+        }
+        drawPath(pencilPath, tint, style = stroke)
+        drawLine(tint, Offset(14f * s, 6f * s), Offset(18f * s, 10f * s), strokeWidth = sw, cap = StrokeCap.Round)
+    }
+}
+
+/**
+ * 20. ИКОНКА ГАНТЕЛИ (LUCIDE DUMBBELL) ДЛЯ KINETIC HUB
+ */
+@Composable
+fun LucideDumbbell(
+    modifier: Modifier = Modifier,
+    tint: Color = BiocodePalette.BioLime,
+    strokeWidthDp: Dp = 2.dp
+) {
+    Canvas(modifier = modifier) {
+        val s = size.minDimension / 24f
+        val sw = strokeWidthDp.toPx()
+        val stroke = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        // Центральный гриф
+        drawLine(tint, Offset(6.5f * s, 17.5f * s), Offset(17.5f * s, 6.5f * s), strokeWidth = sw * 1.2f, cap = StrokeCap.Round)
+
+        // Левый блин
+        drawLine(tint, Offset(3f * s, 15f * s), Offset(9f * s, 21f * s), strokeWidth = sw * 1.5f, cap = StrokeCap.Round)
+        drawLine(tint, Offset(1.5f * s, 16.5f * s), Offset(7.5f * s, 22.5f * s), strokeWidth = sw, cap = StrokeCap.Round)
+
+        // Правый блин
+        drawLine(tint, Offset(15f * s, 3f * s), Offset(21f * s, 9f * s), strokeWidth = sw * 1.5f, cap = StrokeCap.Round)
+        drawLine(tint, Offset(16.5f * s, 1.5f * s), Offset(22.5f * s, 7.5f * s), strokeWidth = sw, cap = StrokeCap.Round)
+    }
+}
+
+/**
+ * 21. ИКОНКА ЭНЕРГИИ (LUCIDE ZAP)
+ */
+@Composable
+fun LucideZap(
+    modifier: Modifier = Modifier,
+    tint: Color = BiocodePalette.BioLime,
+    strokeWidthDp: Dp = 2.dp
+) {
+    Canvas(modifier = modifier) {
+        val s = size.minDimension / 24f
+        val sw = strokeWidthDp.toPx()
+        val stroke = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        val zapPath = Path().apply {
+            moveTo(13f * s, 2f * s)
+            lineTo(3f * s, 14f * s)
+            lineTo(12f * s, 14f * s)
+            lineTo(11f * s, 22f * s)
+            lineTo(21f * s, 10f * s)
+            lineTo(12f * s, 10f * s)
+            close()
+        }
+        drawPath(zapPath, tint, style = stroke)
+    }
+}
+
+
 

@@ -44,6 +44,18 @@ import com.biocode.engine.MealEntry
 /**
  * 📖 5. ЭКРАН «ДНЕВНИК» (NUTRITION DIARY & BIOCYCLE LOG)
  */
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
+/**
+ * 📖 5. ЭКРАН «ДНЕВНИК» (NUTRITION DIARY & BIOCYCLE LOG) С КАЛЕНДАРЕМ-ХИТМАПОМ
+ */
 @Composable
 fun DiaryScreen(
     state: DailyNutritionState,
@@ -53,6 +65,18 @@ fun DiaryScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+
+    val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
+    var selectedDate by remember { mutableStateOf(todayStr) }
+
+    // Данные для выбранного дня
+    val mealsForSelectedDate = remember(state.recentMeals, selectedDate) {
+        state.recentMeals.filter { it.date == selectedDate }
+    }
+    val dayCalories = mealsForSelectedDate.sumOf { it.calories }
+    val dayProtein = mealsForSelectedDate.sumOf { it.protein.toDouble() }.toFloat()
+    val dayFat = mealsForSelectedDate.sumOf { it.fat.toDouble() }.toFloat()
+    val dayCarbs = mealsForSelectedDate.sumOf { it.carbs.toDouble() }.toFloat()
 
     Box(
         modifier = modifier
@@ -89,7 +113,7 @@ fun DiaryScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -112,7 +136,7 @@ fun DiaryScreen(
                     ) {
                         LucideCalendar(modifier = Modifier.size(12.dp), tint = BiocodePalette.BioLime)
                         Text(
-                            text = state.dateLabel,
+                            text = if (selectedDate == todayStr) "СЕГОДНЯ" else selectedDate,
                             style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.5.sp),
                             color = BiocodePalette.NoguchiCream
                         )
@@ -126,16 +150,24 @@ fun DiaryScreen(
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // 1. СУММАРНЫЙ БАЛАНС СУТОК
+                // 1. ТЕПЛОВАЯ КАРТА (CALENDAR HEATMAP 0% .. 200%)
+                BiocodeCalendarHeatmap(
+                    selectedDate = selectedDate,
+                    onSelectDate = { selectedDate = it },
+                    allMeals = state.recentMeals,
+                    targetCalories = state.targetCalories
+                )
+
+                // 2. СУММАРНЫЙ БАЛАНС ВЫБРАННЫХ СУТОК
                 BiocodeBentoCard(
-                    title = "СУТОЧНЫЙ ИТОГ",
-                    badgeText = "${state.consumedCalories} / ${state.targetCalories} KCAL",
-                    badgeColor = BiocodePalette.BioLime,
+                    title = "СУТОЧНЫЙ ИТОГ (${if (selectedDate == todayStr) "СЕГОДНЯ" else selectedDate})",
+                    badgeText = "$dayCalories / ${state.targetCalories} KCAL",
+                    badgeColor = if (dayCalories >= state.targetCalories) BiocodePalette.BioLime else BiocodePalette.NoguchiCream,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         // Калорийная полоса
-                        val ratio = (state.consumedCalories.toFloat() / state.targetCalories.toFloat()).coerceIn(0f, 1f)
+                        val ratio = if (state.targetCalories > 0) (dayCalories.toFloat() / state.targetCalories.toFloat()).coerceIn(0f, 1f) else 0f
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -159,21 +191,21 @@ fun DiaryScreen(
                         ) {
                             Column {
                                 Text("БЕЛОК", style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp), color = BiocodePalette.BioLime)
-                                Text("${state.currentProteinGrams.toInt()} / ${state.targetProteinGrams.toInt()}г", style = BiocodeTypography.MonospaceTitle.copy(fontSize = 13.sp), color = BiocodePalette.BioLime)
+                                Text("${dayProtein.toInt()} / ${state.targetProteinGrams.toInt()}г", style = BiocodeTypography.MonospaceTitle.copy(fontSize = 13.sp), color = BiocodePalette.BioLime)
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("ЖИРЫ", style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp), color = BiocodePalette.MacroFat)
-                                Text("${state.currentFatGrams.toInt()} / ${state.targetFatGrams.toInt()}г", style = BiocodeTypography.MonospaceTitle.copy(fontSize = 13.sp), color = BiocodePalette.MacroFat)
+                                Text("${dayFat.toInt()} / ${state.targetFatGrams.toInt()}г", style = BiocodeTypography.MonospaceTitle.copy(fontSize = 13.sp), color = BiocodePalette.MacroFat)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("УГЛЕВОДЫ", style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp), color = BiocodePalette.NoguchiCream)
-                                Text("${state.currentCarbsGrams.toInt()} / ${state.targetCarbsGrams.toInt()}г", style = BiocodeTypography.MonospaceTitle.copy(fontSize = 13.sp), color = BiocodePalette.NoguchiCream)
+                                Text("${dayCarbs.toInt()} / ${state.targetCarbsGrams.toInt()}г", style = BiocodeTypography.MonospaceTitle.copy(fontSize = 13.sp), color = BiocodePalette.NoguchiCream)
                             }
                         }
                     }
                 }
 
-                // 2. ЗАГОЛОВОК СПИСКА ПРИЕМОВ ПИЩИ
+                // 3. ЗАГОЛОВОК СПИСКА ПРИЕМОВ ПИЩИ
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -182,7 +214,7 @@ fun DiaryScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "ХРОНОЛОГИЯ // ПРИЕМЫ ПИЩИ (${state.recentMeals.size})",
+                        text = "ХРОНОЛОГИЯ ПРИЕМОВ ПИЩИ (${mealsForSelectedDate.size})",
                         style = BiocodeTypography.TabLabel,
                         color = BiocodePalette.NoguchiCream.copy(alpha = 0.9f)
                     )
@@ -209,12 +241,12 @@ fun DiaryScreen(
                     }
                 }
 
-                // 3. СПИСОК ПРИЕМОВ ПИЩИ
-                if (state.recentMeals.isEmpty()) {
+                // 4. СПИСОК ПРИЕМОВ ПИЩИ ЗА ВЫБРАННЫЙ ДЕНЬ
+                if (mealsForSelectedDate.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(140.dp)
+                            .height(130.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .background(BiocodePalette.SpruceDeck)
                             .border(1.dp, BiocodePalette.DeckBorder, RoundedCornerShape(20.dp)),
@@ -226,12 +258,12 @@ fun DiaryScreen(
                         ) {
                             LucideBookOpen(modifier = Modifier.size(28.dp), tint = BiocodePalette.BioLime.copy(alpha = 0.5f))
                             Text(
-                                text = "ЖУРНАЛ СЕГОДНЯ ПУСТ",
+                                text = "В ЭТОТ ДЕНЬ НЕТ ЗАПИСЕЙ",
                                 style = BiocodeTypography.TabLabel,
                                 color = BiocodePalette.NoguchiCream.copy(alpha = 0.7f)
                             )
                             Text(
-                                text = "Нажмите + для добавления первого блюда",
+                                text = "Выберите другой день в календаре или добавьте прием",
                                 style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.5.sp),
                                 color = BiocodePalette.BioLime
                             )
@@ -239,7 +271,7 @@ fun DiaryScreen(
                     }
                 } else {
                     BiocodeMealList(
-                        meals = state.recentMeals,
+                        meals = mealsForSelectedDate,
                         onMealClick = onMealClick,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -250,3 +282,185 @@ fun DiaryScreen(
         }
     }
 }
+
+/**
+ * 🗓 БИОМОРФНЫЙ КАЛЕНДАРЬ-ХИТМАП (0%, 30%, 70%, 100%, 130%, 170%, 200%)
+ */
+@Composable
+fun BiocodeCalendarHeatmap(
+    selectedDate: String,
+    onSelectDate: (String) -> Unit,
+    allMeals: List<MealEntry>,
+    targetCalories: Int,
+    modifier: Modifier = Modifier
+) {
+    // Формируем 7 дней: от 6 дней назад до сегодняшнего
+    val days = remember(allMeals, targetCalories) {
+        (6 downTo 0).map { daysAgo ->
+            val cal = Calendar.getInstance()
+            cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
+            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
+            val dayName = SimpleDateFormat("EE", Locale("ru")).format(cal.time).uppercase().replace(".", "")
+            val dayNumber = SimpleDateFormat("dd", Locale.getDefault()).format(cal.time)
+
+            val totalCals = allMeals.filter { it.date == dateStr }.sumOf { it.calories }
+            val pct = if (targetCalories > 0) ((totalCals.toFloat() / targetCalories.toFloat()) * 100).toInt() else 0
+
+            val (tierPct, tierColor) = when {
+                pct <= 5 -> 0 to Color(0xFF1B2625)
+                pct in 6..45 -> 30 to Color(0xFF2C5645)
+                pct in 46..85 -> 70 to Color(0xFF5A942E)
+                pct in 86..115 -> 100 to BiocodePalette.BioLime
+                pct in 116..150 -> 130 to Color(0xFFE4F524)
+                pct in 151..185 -> 170 to BiocodePalette.LipidAmber
+                else -> 200 to Color(0xFFFF3366) // 200%+
+            }
+
+            CalendarDayModel(
+                dateStr = dateStr,
+                dayName = dayName,
+                dayNumber = dayNumber,
+                actualPct = pct,
+                tierPct = tierPct,
+                color = tierColor,
+                isToday = (daysAgo == 0)
+            )
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(BiocodePalette.SpruceDeck)
+            .border(1.2.dp, BiocodePalette.DeckBorder, RoundedCornerShape(18.dp))
+            .padding(12.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Заголовок хитмапа
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "МАТРИЦА КАЛОРИЙ // ТЕПЛОВАЯ КАРТА",
+                    style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.5.sp),
+                    color = BiocodePalette.BioLime
+                )
+                Text(
+                    text = "7-ДНЕВНЫЙ ЦИКЛ",
+                    style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp),
+                    color = BiocodePalette.NoguchiCream.copy(alpha = 0.6f)
+                )
+            }
+
+            // Ряд 7 плашек дней
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                days.forEach { day ->
+                    val isSelected = (day.dateStr == selectedDate)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isSelected) BiocodePalette.PineTeal else BiocodePalette.DarkMoss.copy(alpha = 0.6f))
+                            .border(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) BiocodePalette.BioLime else BiocodePalette.DeckBorder.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { onSelectDate(day.dateStr) }
+                            .padding(vertical = 8.dp, horizontal = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text(
+                                text = day.dayName,
+                                style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.5.sp),
+                                color = if (day.isToday) BiocodePalette.BioLime else BiocodePalette.NoguchiCream.copy(alpha = 0.6f),
+                                fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Normal
+                            )
+
+                            Text(
+                                text = day.dayNumber,
+                                style = BiocodeTypography.MonospaceTitle.copy(fontSize = 11.sp),
+                                color = if (isSelected) BiocodePalette.BioLime else BiocodePalette.NoguchiCream,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            // Плашка тепловой карты с градиентным био-цветом
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 24.dp, height = 12.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(day.color)
+                                    .border(
+                                        0.5.dp,
+                                        if (day.tierPct == 0) BiocodePalette.DeckBorder.copy(alpha = 0.5f) else day.color.copy(alpha = 0.9f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                            )
+
+                            // Текстовый процент выполнения
+                            Text(
+                                text = "${day.tierPct}%",
+                                style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.5.sp),
+                                color = if (day.tierPct >= 100) day.color else BiocodePalette.NoguchiCream.copy(alpha = 0.7f),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Шкала-легенда градиента
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(BiocodePalette.DarkMoss.copy(alpha = 0.5f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "0% ПУСТО",
+                    style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.sp),
+                    color = Color(0xFF6B807B)
+                )
+                Text(
+                    text = "• 30% • 70%",
+                    style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.sp),
+                    color = Color(0xFF5A942E)
+                )
+                Text(
+                    text = "100% НОРМА",
+                    style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.sp),
+                    color = BiocodePalette.BioLime,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "130% • 170% • 200%",
+                    style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.sp),
+                    color = Color(0xFFFF3366)
+                )
+            }
+        }
+    }
+}
+
+private data class CalendarDayModel(
+    val dateStr: String,
+    val dayName: String,
+    val dayNumber: String,
+    val actualPct: Int,
+    val tierPct: Int,
+    val color: Color,
+    val isToday: Boolean
+)

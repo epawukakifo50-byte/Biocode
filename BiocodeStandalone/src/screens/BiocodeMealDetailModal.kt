@@ -40,6 +40,7 @@ import com.biocode.engine.BiocodeDotMatrixText
 import com.biocode.engine.BiocodePalette
 import com.biocode.engine.BiocodeTypography
 import com.biocode.engine.LucideApple
+import com.biocode.engine.LucideEdit
 import com.biocode.engine.LucideMoon
 import com.biocode.engine.LucideSun
 import com.biocode.engine.LucideTrash2
@@ -52,7 +53,8 @@ import com.biocode.engine.MealType
 fun BiocodeMealDetailModal(
     meal: MealEntry,
     onDismiss: () -> Unit,
-    onDeleteMeal: (String) -> Unit
+    onDeleteMeal: (String) -> Unit,
+    onEditMeal: (MealEntry) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -197,14 +199,14 @@ fun BiocodeMealDetailModal(
                     }
                 }
 
-                // 3. ФОТО БЛЮДА (ИЛИ БИОМОРФНЫЙ ВИЗИР)
+                // 3. ФОТО БЛЮДА (ВЫСОКОЧЕТКИЙ БИОМОРФНЫЙ ВИЗИР)
                 if (mealBitmap != null) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .border(1.2.dp, BiocodePalette.BioLime.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                            .height(210.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .border(1.5.dp, BiocodePalette.BioLime.copy(alpha = 0.7f), RoundedCornerShape(18.dp))
                     ) {
                         Image(
                             bitmap = mealBitmap.asImageBitmap(),
@@ -216,14 +218,15 @@ fun BiocodeMealDetailModal(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(8.dp)
+                                .padding(10.dp)
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(BiocodePalette.DarkMoss.copy(alpha = 0.85f))
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                .background(BiocodePalette.DarkMoss.copy(alpha = 0.90f))
+                                .border(1.dp, BiocodePalette.BioLime.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = "СЕНСОРНЫЙ СНИМОК // 1.0X",
-                                style = BiocodeTypography.TelemetryLabel.copy(fontSize = 7.5.sp),
+                                text = "BIO-SCAN // 1.0X UHD",
+                                style = BiocodeTypography.TelemetryLabel.copy(fontSize = 8.sp),
                                 color = BiocodePalette.BioLime
                             )
                         }
@@ -405,7 +408,34 @@ fun BiocodeMealDetailModal(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // 6. КНОПКИ ДЕЙСТВИЙ: УДАЛИТЬ И ЗАКРЫТЬ
+                // 6. КНОПКА «ИЗМЕНИТЬ ПРИЕМ ПИЩИ»
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(23.dp))
+                        .background(BiocodePalette.BioLime)
+                        .clickable {
+                            onEditMeal(meal)
+                            onDismiss()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LucideEdit(modifier = Modifier.size(16.dp), tint = BiocodePalette.DarkMoss)
+                        Text(
+                            text = "ИЗМЕНИТЬ ПРИЕМ ПИЩИ",
+                            style = BiocodeTypography.TabLabel,
+                            color = BiocodePalette.DarkMoss,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // 7. КНОПКИ ДЕЙСТВИЙ: УДАЛИТЬ И ЗАКРЫТЬ
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
